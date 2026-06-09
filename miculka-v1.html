@@ -1,0 +1,987 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#070d1a">
+<title>Miculka · Operaciones</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow-x:hidden}
+body{
+  font-family:-apple-system,'Segoe UI',system-ui,Roboto,Arial,sans-serif;
+  background:#070d1a;color:#dce9f9;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+#root{max-width:400px;margin:0 auto;min-height:100vh}
+
+/* screens */
+.scr{display:none}
+.scr.show{display:block}
+.fade{animation:fadeUp .22s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* glass card */
+.card{
+  background:rgba(255,255,255,.055);
+  border:1px solid rgba(255,255,255,.1);
+  backdrop-filter:blur(10px);
+}
+
+/* tap feedback */
+.tap{cursor:pointer;user-select:none;transition:transform .1s,opacity .12s}
+.tap:active{transform:scale(.97);opacity:.85}
+
+/* progress bar */
+.pbar{height:7px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
+.pfill{height:100%;border-radius:99px;background:linear-gradient(90deg,#1e40af,#16a34a);transition:width .5s ease}
+
+/* pill badge */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;
+  padding:3px 10px;border-radius:99px;letter-spacing:.02em}
+
+/* state color system */
+.s-pendiente{color:#8599b0;background:rgba(133,153,176,.12)}
+.s-en_ruta{color:#60a5fa;background:rgba(96,165,250,.15)}
+.s-validada{color:#4ade80;background:rgba(74,222,128,.15)}
+.s-incidente{color:#fb923c;background:rgba(251,146,60,.15)}
+.s-cerrada{color:#3d5068;background:rgba(61,80,104,.1)}
+
+.dot-pendiente{color:#8599b0}
+.dot-en_ruta{color:#60a5fa}
+.dot-validada{color:#4ade80}
+.dot-incidente{color:#fb923c}
+.dot-cerrada{color:#3d5068}
+
+/* muted text */
+.muted{color:#4a6180;font-size:12px}
+.label{color:#8599b0;font-size:11px;letter-spacing:.04em;text-transform:uppercase;font-weight:600}
+
+/* spinner */
+.spin{animation:rot 1s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* select / textarea */
+.field{
+  width:100%;background:#0d1525;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:12px;padding:12px 14px;
+  color:#dce9f9;font-size:14px;
+  font-family:inherit;outline:none;
+  transition:border-color .2s;
+}
+.field:focus{border-color:rgba(96,165,250,.5)}
+textarea.field{resize:none}
+
+/* divider */
+.div{height:1px;background:rgba(255,255,255,.06);margin:6px 0}
+</style>
+</head>
+<body>
+<div id="root">
+
+<!-- ═══════════ SPLASH ════════════════════════════════ -->
+<div id="scr-splash" class="scr show" style="
+  position:fixed;inset:0;z-index:99;background:#070d1a;
+  display:flex;flex-direction:column;align-items:center;justify-content:center">
+  <div style="text-align:center">
+    <div style="font-size:44px;font-weight:900;letter-spacing:.32em;color:#fff;
+                text-indent:.32em">MICULKA</div>
+    <div style="font-size:11px;letter-spacing:.22em;color:#1d4ed8;margin-top:8px;
+                font-weight:600">LOGÍSTICA · OPERACIONES</div>
+  </div>
+  <div class="muted" style="position:absolute;bottom:28px;letter-spacing:.05em">
+    v1.0 · Prueba operativa
+  </div>
+</div>
+
+<!-- ═══════════ SELECCIÓN DE ROL ═════════════════════ -->
+<div id="scr-role" class="scr px fade" style="padding:32px 18px 24px">
+  <div style="text-align:center;margin-bottom:28px">
+    <div style="font-size:34px;font-weight:900;letter-spacing:.3em;color:#fff;
+                text-indent:.3em">MICULKA</div>
+    <div style="font-size:11px;letter-spacing:.2em;color:#1d4ed8;margin-top:6px;
+                font-weight:600">LOGÍSTICA · OPERACIONES</div>
+  </div>
+  <div class="card" style="border-radius:18px;padding:16px 18px;margin-bottom:22px">
+    <div class="label" style="margin-bottom:4px">Prueba operativa · v1</div>
+    <div style="font-weight:700;font-size:16px;margin-bottom:3px">
+      R11 · Partido de la Costa
+    </div>
+    <div class="muted">23 puntos · Central: Alsina 1978, CABA</div>
+  </div>
+  <div class="muted" style="text-align:center;margin-bottom:14px;letter-spacing:.02em">
+    Seleccioná tu rol para continuar
+  </div>
+  <button class="tap card" onclick="selectRole('chofer')"
+    style="display:block;width:100%;border-radius:18px;padding:18px;text-align:left;
+           border-color:rgba(30,64,175,.35);margin-bottom:10px">
+    <div style="font-size:22px;margin-bottom:6px">🚐</div>
+    <div style="font-weight:800;font-size:17px;margin-bottom:3px">Chofer recolector</div>
+    <div class="muted">Gestionar ruta, validar paradas y registrar incidentes</div>
+  </button>
+  <button class="tap card" onclick="selectRole('jefe')"
+    style="display:block;width:100%;border-radius:18px;padding:18px;text-align:left;
+           border-color:rgba(109,40,217,.3)">
+    <div style="font-size:22px;margin-bottom:6px">📊</div>
+    <div style="font-weight:800;font-size:17px;margin-bottom:3px">Jefe / Central</div>
+    <div class="muted">Monitoreo en tiempo real · panel de control</div>
+  </button>
+</div>
+
+<!-- ═══════════ LOADING OVERLAY ══════════════════════ -->
+<div id="scr-loading" class="scr"
+     style="position:fixed;inset:0;z-index:50;background:rgba(7,13,26,.88);
+            display:flex;align-items:center;justify-content:center">
+  <div style="text-align:center">
+    <div class="spin" style="width:28px;height:28px;border:2px solid #1d4ed8;
+      border-top-color:transparent;border-radius:50%;margin:0 auto 12px"></div>
+    <div id="loadMsg" class="muted">Cargando...</div>
+  </div>
+</div>
+
+<!-- ═══════════ INICIAR JORNADA (chofer) ═════════════ -->
+<div id="scr-init" class="scr fade" style="padding:20px 18px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
+    <button class="tap muted" onclick="showScr('scr-role')">← Cambiar rol</button>
+    <div class="badge s-en_ruta">🚐 Chofer</div>
+  </div>
+  <div class="card" style="border-radius:22px;padding:28px 20px;text-align:center;margin-bottom:18px">
+    <div style="font-size:48px;margin-bottom:14px">🌅</div>
+    <div style="font-weight:800;font-size:20px;margin-bottom:10px">Nueva jornada</div>
+    <div class="muted" style="line-height:1.8">
+      <strong style="color:#8599b0" id="initFecha"></strong><br>
+      R11 · Partido de la Costa<br>
+      <span style="color:#dce9f9;font-weight:600">22 laboratorios + Central CABA</span>
+    </div>
+  </div>
+  <button class="tap" onclick="iniciarJornada()"
+    style="display:block;width:100%;background:#1d4ed8;border-radius:16px;
+           padding:18px;font-weight:800;font-size:17px;color:#fff;border:none">
+    🚀 Iniciar jornada de hoy
+  </button>
+  <div class="muted" style="text-align:center;margin-top:10px">
+    Queda registrado en el sistema de Miculka
+  </div>
+</div>
+
+<!-- ═══════════ VISTA CHOFER ══════════════════════════ -->
+<div id="scr-driver" class="scr fade" style="padding:16px 18px">
+  <!-- header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <button class="tap muted" onclick="confirmarSalida()">← Salir</button>
+    <div class="badge s-en_ruta">🚐 En ruta</div>
+  </div>
+
+  <!-- ruta header -->
+  <div class="card" style="border-radius:18px;padding:14px 16px;margin-bottom:10px">
+    <div style="display:flex;align-items:start;justify-content:space-between">
+      <div>
+        <div style="font-weight:700;font-size:15px">R11 · Partido de la Costa</div>
+        <div class="muted" style="margin-top:2px">v1 · 23 puntos</div>
+      </div>
+      <div class="badge" id="drvProg"
+           style="background:rgba(255,255,255,.08);color:#8599b0;white-space:nowrap">
+        0/23
+      </div>
+    </div>
+    <div class="pbar" style="margin-top:10px"><div class="pfill" id="drvBar" style="width:0"></div></div>
+  </div>
+
+  <!-- stop card -->
+  <div class="card" id="drvStopCard"
+       style="border-radius:18px;padding:16px 18px;margin-bottom:10px">
+    <!-- populated by JS -->
+  </div>
+
+  <!-- acciones principales -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+    <button class="tap card" onclick="accionValidar()"
+      style="border-radius:14px;padding:12px 14px;text-align:left;
+             border-color:rgba(74,222,128,.2)">
+      <div style="font-size:20px;margin-bottom:5px">✅</div>
+      <div style="font-weight:700;font-size:14px">Validar</div>
+      <div class="muted">Confirmar presencia</div>
+    </button>
+    <button class="tap card" onclick="abrirIncidente()"
+      style="border-radius:14px;padding:12px 14px;text-align:left;
+             border-color:rgba(251,146,60,.2)">
+      <div style="font-size:20px;margin-bottom:5px">⚠️</div>
+      <div style="font-weight:700;font-size:14px">Incidente</div>
+      <div class="muted">Cerrado / problema</div>
+    </button>
+    <button class="tap card" onclick="accionMaterial('solicitado')"
+      style="border-radius:14px;padding:12px 14px;text-align:left;
+             border-color:rgba(96,165,250,.2)">
+      <div style="font-size:20px;margin-bottom:5px">📦</div>
+      <div style="font-weight:700;font-size:14px">Pedir materiales</div>
+      <div class="muted">Solicita insumos</div>
+    </button>
+    <button class="tap card" onclick="accionMaterial('entregado')"
+      style="border-radius:14px;padding:12px 14px;text-align:left;
+             border-color:rgba(34,197,94,.2)">
+      <div style="font-size:20px;margin-bottom:5px">📬</div>
+      <div style="font-weight:700;font-size:14px">Entregar</div>
+      <div class="muted">Insumos entregados</div>
+    </button>
+  </div>
+
+  <!-- navegación -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+    <button class="tap card" onclick="accionVolverLuego()"
+      style="border-radius:14px;padding:12px 14px;text-align:left">
+      <div style="font-weight:600;font-size:14px;color:#8599b0">🔄 Volver luego</div>
+      <div class="muted">Queda pendiente</div>
+    </button>
+    <button class="tap" onclick="accionSiguiente()"
+      style="background:#1d4ed8;border-radius:14px;padding:12px 14px;
+             text-align:left;border:none">
+      <div style="font-weight:800;font-size:14px;color:#fff">Siguiente →</div>
+      <div style="color:#93c5fd;font-size:11px">Continúa la ruta</div>
+    </button>
+  </div>
+
+  <!-- registro del día -->
+  <div class="card" style="border-radius:18px;padding:14px 16px;margin-bottom:10px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:8px">📋 Registro del día</div>
+    <div id="drvLog" style="font-size:11px;color:#4a6180;line-height:1.9;
+                             max-height:110px;overflow-y:auto">
+      Sin registros aún.
+    </div>
+  </div>
+
+  <!-- botón cierre jornada (solo en Central) -->
+  <div id="drvCerrar" style="display:none">
+    <button class="tap" onclick="cerrarJornada()"
+      style="display:block;width:100%;background:#16a34a;border-radius:16px;
+             padding:18px;font-weight:800;font-size:16px;color:#fff;border:none">
+      🏁 Llegué a Central · Cerrar jornada
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════ FORM INCIDENTE ════════════════════════ -->
+<div id="scr-incident" class="scr fade" style="padding:16px 18px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+    <button class="tap muted" onclick="showScr('scr-driver')">← Cancelar</button>
+    <div class="badge s-incidente">⚠️ Incidente</div>
+  </div>
+  <div class="card" style="border-radius:18px;padding:18px;margin-bottom:14px">
+    <div style="font-weight:800;font-size:17px;margin-bottom:4px">Registrar incidente</div>
+    <div id="incParadaInfo" class="muted" style="margin-bottom:18px;line-height:1.6"></div>
+    <div class="label" style="margin-bottom:6px">Motivo</div>
+    <select id="incMotivo" class="field" style="margin-bottom:14px">
+      <option value="cerrado_temporal">Cerrado temporal</option>
+      <option value="no_atendido">Sin respuesta / no atendido</option>
+      <option value="falta_materiales">Falta de materiales</option>
+      <option value="rechazo_definitivo">Rechazo definitivo</option>
+      <option value="no_atendido_reiterado">Sin respuesta reiterada</option>
+    </select>
+    <div class="label" style="margin-bottom:6px">Nota adicional (opcional)</div>
+    <textarea id="incNota" class="field" rows="3"
+      placeholder="Observaciones..."></textarea>
+  </div>
+  <button class="tap" onclick="confirmarIncidente()"
+    style="display:block;width:100%;background:#92400e;border-radius:16px;
+           padding:16px;font-weight:800;font-size:15px;color:#fff;border:none">
+    Confirmar incidente →
+  </button>
+</div>
+
+<!-- ═══════════ JORNADA CERRADA ═══════════════════════ -->
+<div id="scr-closed" class="scr fade"
+     style="padding:48px 18px 24px;text-align:center">
+  <div style="font-size:64px;margin-bottom:16px">🏁</div>
+  <div style="font-weight:900;font-size:26px;margin-bottom:8px">Jornada completada</div>
+  <div class="muted" style="margin-bottom:28px">Todas las muestras en Central</div>
+  <div class="card" id="closedResumen"
+       style="border-radius:18px;padding:18px;text-align:left;margin-bottom:18px">
+    <!-- populated by JS -->
+  </div>
+  <button class="tap card" onclick="showScr('scr-role')"
+    style="display:block;width:100%;border-radius:16px;padding:16px;
+           font-weight:700;font-size:15px">
+    Volver al inicio
+  </button>
+</div>
+
+<!-- ═══════════ PANEL JEFE ════════════════════════════ -->
+<div id="scr-owner" class="scr fade" style="padding:16px 18px">
+  <!-- header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <button class="tap muted" onclick="salirJefe()">← Salir</button>
+    <div class="badge" style="color:#a78bfa;background:rgba(167,139,250,.15)">
+      📊 Central
+    </div>
+    <button class="tap muted" onclick="refrescarJefe()">🔄 Actualizar</button>
+  </div>
+
+  <!-- sin jornada -->
+  <div id="ownerVacio" class="card"
+       style="border-radius:18px;padding:28px;text-align:center;margin-bottom:12px;display:none">
+    <div style="font-size:36px;margin-bottom:12px">⏳</div>
+    <div style="font-weight:700;margin-bottom:6px">Esperando al chofer</div>
+    <div class="muted" style="margin-bottom:14px">
+      El chofer aún no inició la jornada de hoy.
+    </div>
+    <button class="tap muted" onclick="refrescarJefe()"
+      style="font-size:13px;color:#3b82f6">
+      Verificar de nuevo
+    </button>
+  </div>
+
+  <!-- resumen -->
+  <div class="card" style="border-radius:18px;padding:16px 18px;margin-bottom:10px">
+    <div style="font-weight:700;font-size:15px;margin-bottom:2px">Ruta activa</div>
+    <div class="muted" style="margin-bottom:10px">R11 · Partido de la Costa · v1</div>
+    <div class="pbar"><div class="pfill" id="ownerBar" style="width:0"></div></div>
+    <div id="ownerStats" class="muted" style="margin-top:10px;line-height:1.8"></div>
+  </div>
+
+  <!-- lista de paradas -->
+  <div class="card" style="border-radius:18px;padding:16px 18px;margin-bottom:10px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:10px">Paradas</div>
+    <div id="ownerParadas" style="font-size:12px;line-height:2.1;
+                                   max-height:340px;overflow-y:auto"></div>
+  </div>
+
+  <!-- eventos -->
+  <div class="card" style="border-radius:18px;padding:16px 18px;margin-bottom:10px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:8px">📋 Eventos del día</div>
+    <div id="ownerLog" style="font-size:11px;color:#4a6180;line-height:2;
+                               max-height:220px;overflow-y:auto">
+      Sin eventos.
+    </div>
+  </div>
+
+  <div class="muted" style="text-align:center;padding-bottom:20px">
+    ⚡ Actualización automática activa
+  </div>
+</div>
+
+</div><!-- #root -->
+
+<!-- ═══════════ JAVASCRIPT ════════════════════════════ -->
+<script>
+'use strict';
+
+/* ── CONFIGURACIÓN ────────────────────────────────── */
+const SB_URL = 'https://dmngkjdixkynhrajuznm.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtbmdramRpeGt5bmhyYWp1em5tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NTM0MjEsImV4cCI6MjA5NjUyOTQyMX0.67TLglGhA9dIVBAGVk1_Bb5WAqylJ3MIEo5sXFt2bvs';
+const REC_ID = 'e3725d39-3f0f-4499-af19-3e8bf8ad9752';
+
+/* ── ESTADO GLOBAL ────────────────────────────────── */
+const sb   = window.supabase.createClient(SB_URL, SB_KEY);
+let rol    = null;          // 'chofer' | 'jefe'
+let jornada = null;         // fila de jornadas
+let visitas = [];           // filas de visitas (ordenadas por parada.orden)
+let stopIdx = 0;            // índice actual en visitas[]
+let rtCh   = null;          // canal de realtime
+let rtLog  = null;          // intervalo polling log jefe
+
+/* ── UTILIDADES ───────────────────────────────────── */
+const esc = s => String(s||'')
+  .replace(/[&<>"']/g, m =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+const hoy = () => new Date().toISOString().split('T')[0];
+const tFmt = iso =>
+  new Date(iso).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+const dFmt = iso =>
+  new Date(iso).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+const stateIcon = s =>
+  ({pendiente:'○',en_ruta:'●',validada:'✓',incidente:'!',cerrada:'×'}[s]||'○');
+const stateName = s =>
+  ({pendiente:'Pendiente',en_ruta:'En ruta',validada:'Validada',
+    incidente:'Incidente',cerrada:'Cerrada'}[s]||s);
+
+function showScr(id) {
+  document.querySelectorAll('.scr').forEach(el => el.classList.remove('show'));
+  const el = document.getElementById(id);
+  el.classList.add('show');
+}
+function showLoad(msg='Cargando...') {
+  document.getElementById('loadMsg').textContent = msg;
+  document.getElementById('scr-loading').classList.add('show');
+}
+function hideLoad() {
+  document.getElementById('scr-loading').classList.remove('show');
+}
+
+/* ── SUPABASE HELPERS ─────────────────────────────── */
+async function getJornada() {
+  const {data,error} = await sb.from('jornadas')
+    .select('*')
+    .eq('fecha', hoy())
+    .eq('recorrido_id', REC_ID)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function getVisitas(jornadaId) {
+  const {data,error} = await sb.from('visitas')
+    .select(`
+      id, parada_id, jornada_id, fecha_visita,
+      estado, estado_operativo, estado_logistico,
+      motivo_incidente, bloqueo_retorno, observaciones,
+      paradas!inner(id, orden, laboratorio_nombre, direccion, zona, codigo_parada)
+    `)
+    .eq('jornada_id', jornadaId);
+  if (error) throw error;
+  return (data||[]).sort((a,b) => a.paradas.orden - b.paradas.orden);
+}
+
+async function getEventos(jornadaId) {
+  const ids = visitas.map(v => v.id).filter(Boolean);
+  if (!ids.length) return [];
+  const {data,error} = await sb.from('stop_events')
+    .select('*')
+    .in('visita_id', ids)
+    .order('created_at', {ascending:false})
+    .limit(60);
+  if (error) throw error;
+  return data||[];
+}
+
+async function actualizarVisita(visitaId, updates) {
+  const {data,error} = await sb.from('visitas')
+    .update(updates)
+    .eq('id', visitaId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function insertarEvento(visitaId, paradaId, tipo, nota='') {
+  const {error} = await sb.from('stop_events').insert({
+    visita_id: visitaId,
+    parada_id: paradaId,
+    evento_tipo: tipo,
+    estado_operativo_nuevo: tipo,
+    nota
+  });
+  if (error) console.warn('Evento no guardado:', error.message);
+}
+
+/* ── SELECCIÓN DE ROL ─────────────────────────────── */
+async function selectRole(r) {
+  rol = r;
+  showLoad(r === 'chofer'
+    ? 'Verificando jornada de hoy...'
+    : 'Cargando panel central...');
+  try {
+    jornada = await getJornada();
+    if (r === 'chofer') {
+      if (!jornada) {
+        hideLoad();
+        document.getElementById('initFecha').textContent = dFmt(new Date().toISOString());
+        showScr('scr-init');
+      } else {
+        await cargarChofer();
+      }
+    } else {
+      hideLoad();
+      showScr('scr-owner');
+      if (!jornada) {
+        document.getElementById('ownerVacio').style.display = 'block';
+      } else {
+        await cargarJefe();
+        iniciarRealtime();
+        iniciarPollingLog();
+      }
+    }
+  } catch(e) {
+    hideLoad();
+    alert('Error de conexión:\n' + e.message);
+    showScr('scr-role');
+  }
+}
+
+/* ── INICIAR JORNADA ──────────────────────────────── */
+async function iniciarJornada() {
+  showLoad('Iniciando jornada...');
+  try {
+    // Crear registro de jornada
+    const {data:j,error:je} = await sb.from('jornadas')
+      .insert({fecha:hoy(), recorrido_id:REC_ID})
+      .select().single();
+    if (je) throw je;
+    jornada = j;
+
+    // Obtener paradas del recorrido
+    const {data:pds, error:pde} = await sb.from('paradas')
+      .select('*')
+      .eq('recorrido_id', REC_ID)
+      .order('orden');
+    if (pde) throw pde;
+
+    // Crear una visita por parada
+    const rows = pds.map((p, i) => ({
+      jornada_id  : jornada.id,
+      parada_id   : p.id,
+      recorrido_id: REC_ID,
+      fecha_visita: hoy(),
+      estado          : i === 0 ? 'en_ruta' : 'pendiente',
+      estado_operativo: i === 0 ? 'en_ruta' : 'pendiente',
+      estado_logistico: 'normal'
+    }));
+
+    const {error:ve} = await sb.from('visitas').insert(rows);
+    if (ve) throw ve;
+
+    // Cargar visitas recién creadas
+    visitas = await getVisitas(jornada.id);
+
+    // Registrar inicio
+    if (visitas.length) {
+      await insertarEvento(
+        visitas[0].id, visitas[0].parada_id,
+        'jornada_iniciada', 'Jornada iniciada'
+      );
+    }
+
+    stopIdx = 0;
+    hideLoad();
+    showScr('scr-driver');
+    renderChofer();
+  } catch(e) {
+    hideLoad();
+    alert('Error al iniciar jornada:\n' + e.message);
+  }
+}
+
+/* ── CARGA CHOFER ─────────────────────────────────── */
+async function cargarChofer() {
+  visitas = await getVisitas(jornada.id);
+  if (jornada.estado === 'cerrada') {
+    hideLoad();
+    mostrarCerrada();
+    return;
+  }
+  // Encontrar primer stop no cerrado
+  const idx = visitas.findIndex(v =>
+    v.estado_operativo !== 'cerrada' && v.estado_operativo !== 'validada'
+  );
+  stopIdx = idx >= 0 ? idx : visitas.length - 1;
+  hideLoad();
+  showScr('scr-driver');
+  renderChofer();
+}
+
+/* ── RENDER CHOFER ────────────────────────────────── */
+async function renderChofer() {
+  const total = visitas.length;
+  const done  = visitas.filter(v =>
+    v.estado_operativo === 'cerrada' || v.estado_operativo === 'validada'
+  ).length;
+  const pct   = total ? Math.round((done / total) * 100) : 0;
+
+  document.getElementById('drvProg').textContent = `${done}/${total}`;
+  document.getElementById('drvBar').style.width = pct + '%';
+
+  const v  = visitas[stopIdx];
+  const p  = v.paradas;
+  const esCentral = p.codigo_parada === 'CENTRAL';
+
+  document.getElementById('drvStopCard').innerHTML = `
+    <div style="display:flex;align-items:start;justify-content:space-between;
+                gap:8px;margin-bottom:12px">
+      <div style="font-size:11px;background:rgba(255,255,255,.07);border-radius:99px;
+                  padding:3px 10px;color:#8599b0;white-space:nowrap">
+        Punto ${p.orden}${esCentral ? ' · CENTRAL' : ''}
+      </div>
+      <div class="badge s-${v.estado_operativo}">
+        ${stateIcon(v.estado_operativo)} ${stateName(v.estado_operativo)}
+      </div>
+    </div>
+    <div style="font-weight:800;font-size:19px;margin-bottom:5px;line-height:1.2">
+      ${esc(p.laboratorio_nombre)}
+    </div>
+    <div style="font-size:12px;color:#4a6180;margin-bottom:3px">
+      📍 ${esc(p.direccion)}
+    </div>
+    <div style="font-size:11px;color:#1d4ed8">${esc(p.zona)}</div>
+    ${v.motivo_incidente
+      ? `<div style="margin-top:11px;font-size:12px;color:#fb923c;
+                     background:rgba(251,146,60,.1);border-radius:10px;
+                     padding:8px 12px">
+           ⚠️ ${esc(v.motivo_incidente)}
+         </div>` : ''}
+    ${v.estado_logistico && v.estado_logistico !== 'normal'
+      ? `<div style="margin-top:6px;font-size:12px;color:#60a5fa;
+                     background:rgba(96,165,250,.1);border-radius:10px;
+                     padding:8px 12px">
+           📦 ${esc(v.estado_logistico.replace(/_/g,' '))}
+         </div>` : ''}
+  `;
+
+  // Botón cierre solo en Central
+  document.getElementById('drvCerrar').style.display = esCentral ? 'block' : 'none';
+
+  // Actualizar log
+  await renderLog();
+}
+
+async function renderLog() {
+  try {
+    const eventos = await getEventos(jornada.id);
+    if (eventos.length) {
+      // Mapear visita_id → nombre de laboratorio
+      const labMap = {};
+      visitas.forEach(v => { labMap[v.id] = v.paradas?.laboratorio_nombre || ''; });
+
+      const lines = eventos.slice(0, 20).map(e => {
+        const lab = labMap[e.visita_id] || '';
+        const t   = tFmt(e.created_at);
+        return `<span style="color:#334155">${t}</span> `
+             + `<strong style="color:#8599b0">${esc(lab)}</strong> · `
+             + `${esc(e.evento_tipo)}`
+             + (e.nota ? ` — ${esc(e.nota)}` : '');
+      });
+      document.getElementById('drvLog').innerHTML = lines.join('<br>');
+    } else {
+      document.getElementById('drvLog').textContent = 'Sin registros aún.';
+    }
+  } catch(e) { /* log error silently */ }
+}
+
+/* ── ACCIONES CHOFER ──────────────────────────────── */
+async function accionValidar() {
+  const v = visitas[stopIdx];
+  if (v.estado_operativo === 'validada') {
+    alert('Esta parada ya fue validada.'); return;
+  }
+  showLoad('Guardando validación...');
+  try {
+    const upd = await actualizarVisita(v.id, {
+      estado: 'validada', estado_operativo: 'validada', estado_logistico: 'normal'
+    });
+    visitas[stopIdx] = {...v, ...upd};
+    await insertarEvento(v.id, v.parada_id, 'validada');
+    hideLoad();
+    renderChofer();
+  } catch(e) { hideLoad(); alert('Error: ' + e.message); }
+}
+
+async function accionMaterial(tipo) {
+  const v = visitas[stopIdx];
+  const logistico = tipo === 'solicitado'
+    ? 'materiales_pendientes' : 'materiales_entregados';
+  showLoad('Registrando...');
+  try {
+    const upd = await actualizarVisita(v.id, {estado_logistico: logistico});
+    visitas[stopIdx] = {...v, ...upd};
+    await sb.from('daily_materials').insert({
+      recorrido_id: REC_ID, parada_id: v.parada_id, visita_id: v.id,
+      tipo, estado: tipo === 'solicitado' ? 'pendiente' : 'completado'
+    });
+    await insertarEvento(v.id, v.parada_id,
+      tipo === 'solicitado' ? 'material_solicitado' : 'material_entregado');
+    hideLoad();
+    renderChofer();
+  } catch(e) { hideLoad(); alert('Error: ' + e.message); }
+}
+
+async function accionVolverLuego() {
+  const v = visitas[stopIdx];
+  showLoad('Registrando...');
+  try {
+    const upd = await actualizarVisita(v.id, {estado_logistico: 'pendiente_temporal'});
+    visitas[stopIdx] = {...v, ...upd};
+    await insertarEvento(v.id, v.parada_id, 'pendiente_temporal', 'Volver luego');
+    hideLoad();
+    await _avanzar(true);
+  } catch(e) { hideLoad(); alert('Error: ' + e.message); }
+}
+
+async function accionSiguiente() {
+  await _avanzar(false);
+}
+
+async function _avanzar(mantenePendiente) {
+  const v = visitas[stopIdx];
+  if (!mantenePendiente && v.estado_operativo === 'en_ruta') {
+    showLoad('Avanzando...');
+    try {
+      const upd = await actualizarVisita(v.id,
+        {estado:'cerrada', estado_operativo:'cerrada'});
+      visitas[stopIdx] = {...v, ...upd};
+      await insertarEvento(v.id, v.parada_id, 'cerrada', 'Avanzó al siguiente');
+    } catch(e) { hideLoad(); alert('Error: ' + e.message); return; }
+  }
+  if (stopIdx < visitas.length - 1) {
+    stopIdx++;
+    const vn = visitas[stopIdx];
+    showLoad('Cargando siguiente parada...');
+    try {
+      const upd = await actualizarVisita(vn.id,
+        {estado:'en_ruta', estado_operativo:'en_ruta'});
+      visitas[stopIdx] = {...vn, ...upd};
+      await insertarEvento(vn.id, vn.parada_id, 'en_ruta');
+      hideLoad();
+      renderChofer();
+    } catch(e) { hideLoad(); alert('Error: ' + e.message); }
+  } else {
+    hideLoad();
+    alert('Ya estás en el último punto.');
+  }
+}
+
+function abrirIncidente() {
+  const p = visitas[stopIdx]?.paradas;
+  document.getElementById('incParadaInfo').innerHTML =
+    `<strong>${esc(p?.laboratorio_nombre||'')}</strong><br>` +
+    `${esc(p?.direccion||'')}`;
+  document.getElementById('incNota').value = '';
+  showScr('scr-incident');
+}
+
+async function confirmarIncidente() {
+  const motivo  = document.getElementById('incMotivo').value;
+  const nota    = document.getElementById('incNota').value.trim();
+  const v       = visitas[stopIdx];
+  const bloqueo = motivo === 'rechazo_definitivo' ||
+                  motivo === 'no_atendido_reiterado';
+  showLoad('Registrando incidente...');
+  try {
+    const upd = await actualizarVisita(v.id, {
+      estado            : 'incidente',
+      estado_operativo  : 'incidente',
+      motivo_incidente  : motivo,
+      bloqueo_retorno   : bloqueo,
+      estado_logistico  : bloqueo ? 'normal' : 'pendiente_temporal',
+      observaciones     : nota || null
+    });
+    visitas[stopIdx] = {...v, ...upd};
+    await insertarEvento(v.id, v.parada_id, 'incidente',
+      `${motivo}${nota ? ' — ' + nota : ''}`);
+    hideLoad();
+    showScr('scr-driver');
+    renderChofer();
+  } catch(e) { hideLoad(); alert('Error: ' + e.message); }
+}
+
+async function cerrarJornada() {
+  if (!confirm('¿Confirmar llegada a Central y cierre de jornada?')) return;
+  showLoad('Cerrando jornada...');
+  try {
+    const v = visitas[stopIdx];
+    await actualizarVisita(v.id, {estado:'cerrada', estado_operativo:'cerrada'});
+    visitas[stopIdx].estado_operativo = 'cerrada';
+
+    const validadas  = visitas.filter(x => x.estado_operativo === 'validada').length;
+    const incidentes = visitas.filter(x => x.estado_operativo === 'incidente').length;
+
+    await sb.from('jornadas').update({
+      estado:'cerrada', hora_cierre:new Date().toISOString()
+    }).eq('id', jornada.id);
+    jornada.estado = 'cerrada';
+
+    await sb.from('cierre_jornada').insert({
+      recorrido_id    : REC_ID,
+      fecha           : hoy(),
+      total_paradas   : visitas.length,
+      paradas_validadas: validadas,
+      paradas_rotura  : incidentes,
+      hora_inicio     : jornada.hora_inicio,
+      hora_fin        : new Date().toISOString()
+    });
+    await insertarEvento(v.id, v.parada_id, 'jornada_cerrada', 'Completada');
+    hideLoad();
+    mostrarCerrada();
+  } catch(e) { hideLoad(); alert('Error: ' + e.message); }
+}
+
+function mostrarCerrada() {
+  const total     = visitas.length;
+  const validadas = visitas.filter(v => v.estado_operativo === 'validada').length;
+  const cerradas  = visitas.filter(v => v.estado_operativo === 'cerrada').length;
+  const incidentes= visitas.filter(v => v.estado_operativo === 'incidente').length;
+
+  document.getElementById('closedResumen').innerHTML = `
+    <div style="font-size:13px">
+      <div class="div"></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0">
+        <span style="color:#4a6180">Total paradas</span>
+        <strong>${total}</strong>
+      </div>
+      <div class="div"></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0">
+        <span style="color:#4a6180">Validadas</span>
+        <strong style="color:#4ade80">${validadas}</strong>
+      </div>
+      <div class="div"></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0">
+        <span style="color:#4a6180">Incidentes</span>
+        <strong style="color:#fb923c">${incidentes}</strong>
+      </div>
+      <div class="div"></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0">
+        <span style="color:#4a6180">Cerradas s/validar</span>
+        <strong style="color:#3d5068">${Math.max(0, cerradas - 1)}</strong>
+      </div>
+    </div>
+  `;
+  showScr('scr-closed');
+}
+
+function confirmarSalida() {
+  if (confirm('¿Salir? El progreso está guardado en el sistema.'))
+    showScr('scr-role');
+}
+
+/* ── PANEL JEFE ───────────────────────────────────── */
+async function cargarJefe() {
+  visitas = await getVisitas(jornada.id);
+  renderJefe();
+}
+
+async function renderJefe() {
+  if (!jornada || !visitas.length) {
+    document.getElementById('ownerVacio').style.display = 'block';
+    return;
+  }
+  document.getElementById('ownerVacio').style.display = 'none';
+
+  const total     = visitas.length;
+  const done      = visitas.filter(v =>
+    v.estado_operativo === 'cerrada' || v.estado_operativo === 'validada'
+  ).length;
+  const incidentes= visitas.filter(v => v.estado_operativo === 'incidente').length;
+  const enRuta    = visitas.find(v => v.estado_operativo === 'en_ruta');
+  const pct       = total ? Math.round((done / total) * 100) : 0;
+
+  document.getElementById('ownerBar').style.width = pct + '%';
+  document.getElementById('ownerStats').innerHTML = `
+    <strong style="color:#dce9f9">${done}/${total}</strong> completadas · 
+    <span style="color:#fb923c">${incidentes} incidente${incidentes !== 1 ? 's' : ''}</span> · 
+    ${pct}% avance<br>
+    ${enRuta
+      ? `▶ Ahora en: <strong>${esc(enRuta.paradas?.laboratorio_nombre||'')}</strong><br>`
+      : ''}
+    Estado jornada: <strong style="color:${jornada.estado==='cerrada'?'#3d5068':'#4ade80'}">
+      ${jornada.estado}
+    </strong>
+  `;
+
+  // Lista de paradas
+  document.getElementById('ownerParadas').innerHTML = visitas.map(v => {
+    const p = v.paradas || {};
+    return `
+      <div style="display:flex;gap:8px;padding:3px 0;align-items:start;
+                  border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="color:#334155;width:22px;text-align:right;flex-shrink:0">
+          ${p.orden}.
+        </span>
+        <span class="dot-${v.estado_operativo}" style="flex-shrink:0;font-size:13px">
+          ${stateIcon(v.estado_operativo)}
+        </span>
+        <div style="min-width:0">
+          <span style="color:#cbd5e1">${esc(p.laboratorio_nombre||'')}</span>
+          <span style="color:#334155;font-size:10px;margin-left:5px">${esc(p.zona||'')}</span>
+          ${v.motivo_incidente
+            ? `<span style="color:#b45309;font-size:10px;margin-left:4px">
+                 [${esc(v.motivo_incidente)}]
+               </span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Log de eventos
+  try {
+    const eventos = await getEventos(jornada.id);
+    const labMap  = {};
+    visitas.forEach(v => { labMap[v.id] = v.paradas?.laboratorio_nombre || ''; });
+
+    if (eventos.length) {
+      const lines = eventos.slice(0, 40).map(e => {
+        const lab = labMap[e.visita_id] || '';
+        const t   = tFmt(e.created_at);
+        return `<span style="color:#334155">${t}</span> `
+             + `<strong style="color:#4a6180">${esc(lab)}</strong> · `
+             + `${esc(e.evento_tipo)}`
+             + (e.nota ? ` — ${esc(e.nota)}` : '');
+      });
+      document.getElementById('ownerLog').innerHTML = lines.join('<br>');
+    } else {
+      document.getElementById('ownerLog').textContent = 'Sin eventos.';
+    }
+  } catch(e) { /* silencioso */ }
+}
+
+async function refrescarJefe() {
+  showLoad('Actualizando...');
+  try {
+    jornada = await getJornada();
+    if (jornada) {
+      visitas = await getVisitas(jornada.id);
+      document.getElementById('ownerVacio').style.display = 'none';
+      iniciarRealtime();
+      iniciarPollingLog();
+    }
+    hideLoad();
+    renderJefe();
+  } catch(e) { hideLoad(); alert('Error: ' + e.message); }
+}
+
+function salirJefe() {
+  detenerRealtime();
+  detenerPollingLog();
+  showScr('scr-role');
+}
+
+/* ── REALTIME (jefe) ──────────────────────────────── */
+function iniciarRealtime() {
+  if (!jornada) return;
+  detenerRealtime();
+  rtCh = sb.channel(`jornada_rt_${jornada.id}`)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'visitas',
+      filter: `jornada_id=eq.${jornada.id}`
+    }, payload => {
+      if (payload.new) {
+        const i = visitas.findIndex(v => v.id === payload.new.id);
+        if (i >= 0) visitas[i] = {...visitas[i], ...payload.new};
+      }
+      renderJefe();
+    })
+    .subscribe();
+}
+function detenerRealtime() {
+  if (rtCh) { sb.removeChannel(rtCh); rtCh = null; }
+}
+
+/* ── POLLING LOG (jefe - cada 20s) ───────────────── */
+function iniciarPollingLog() {
+  detenerPollingLog();
+  rtLog = setInterval(async () => {
+    if (rol === 'jefe' && jornada) {
+      try {
+        jornada = await getJornada();
+        if (jornada) {
+          visitas = await getVisitas(jornada.id);
+          renderJefe();
+        }
+      } catch(e) { /* silencioso */ }
+    }
+  }, 20000);
+}
+function detenerPollingLog() {
+  if (rtLog) { clearInterval(rtLog); rtLog = null; }
+}
+
+/* ── SPLASH INIT ──────────────────────────────────── */
+setTimeout(() => {
+  document.getElementById('scr-splash').classList.remove('show');
+  showScr('scr-role');
+}, 1700);
+</script>
+</body>
+</html>
